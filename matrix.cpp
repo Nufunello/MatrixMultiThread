@@ -1,7 +1,5 @@
 #include "matrix.h"
 
-#include <thread>
-
 Matrix::Matrix(std::vector<std::vector<DEFAULT_MATRIX_VALUE_TYPE>> values) :
     _values(std::move(values))
 {
@@ -28,35 +26,33 @@ DEFAULT_MATRIX_VALUE_TYPE multiplyRowOnColumn(const Matrix& lhs, const Matrix& r
     return sum;
 }
 
-Matrix Matrix::multiplyMatrixes(const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns)
-{
-    Matrix resultMatrix(cRows);
-    auto& resultTwoDimVector = resultMatrix._values;
-
-    for (size_t iRow = 0; iRow < cRows; ++iRow)
-    {
-        std::thread thread([&]{
-            std::vector<DEFAULT_MATRIX_VALUE_TYPE> multipliedRow = Matrix::multiplyRow(lhs, rhs, iRow, cColumns);
-            resultTwoDimVector[iRow] = std::move(multipliedRow);
-        });
-        thread.join();
-    }
-
-    return resultMatrix;
-}
-
 std::vector<DEFAULT_MATRIX_VALUE_TYPE> Matrix::multiplyRow(const Matrix& lhs, const Matrix& rhs, size_t iRow, size_t cColumns)
 {
-    std::vector<DEFAULT_MATRIX_VALUE_TYPE> row(cColumns);
+    std::vector<DEFAULT_MATRIX_VALUE_TYPE> row;
+    row.reserve(cColumns);
 
     for (size_t iColumn = 0; iColumn < cColumns; ++iColumn)
     {
-        //std::thread ([&]{
-            row[iColumn] = multiplyRowOnColumn(lhs, rhs, iRow, iColumn);
-        //}).join();
+        row.emplace_back(multiplyRowOnColumn(lhs, rhs, iRow, iColumn));
     }
 
     return row;
+}
+
+std::vector<std::thread> Matrix::multiplyMatrixes(Matrix& resultMatrix, const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns)
+{
+    auto& resultTwoDimVector = resultMatrix._values;
+    std::vector<std::thread> threads;
+    threads.reserve(cRows);
+
+    for (size_t iRow = 0; iRow < cRows; ++iRow)
+    {
+        threads.emplace_back([&, iRow]{
+                        resultTwoDimVector[iRow] = Matrix::multiplyRow(lhs, rhs, iRow, cColumns);
+                    });
+    }
+
+    return threads;
 }
 
 Matrix Matrix::operator*(const Matrix &rhs) const
@@ -71,10 +67,24 @@ Matrix Matrix::operator*(const Matrix &rhs) const
         throw std::exception("First matrix column count should be equal second matrix row count");
     }
 
-    return multiplyMatrixes(lhs, rhs, cRows, cColumns);
+    Matrix resultMatrix(cRows, cColumns);
+
+    std::vector<std::thread> threads = multiplyMatrixes(resultMatrix, lhs, rhs, cRows, cColumns);
+
+    for (size_t i = 0; i < cRows; ++i)
+        threads[i].join();
+
+    return  resultMatrix;
 }
 
-Matrix::Matrix(size_t cRows)
-    : _values(cRows)
+Matrix::Matrix(size_t cRows, size_t cColumns)
 {
+    _values.reserve(cRows);
+
+    for (size_t i = 0; i < cRows; ++i)
+    {
+        std::vector<DEFAULT_MATRIX_VALUE_TYPE> temp;
+        temp.reserve(cColumns);
+        _values.emplace_back(std::move(temp));
+    }
 }
