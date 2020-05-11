@@ -15,11 +15,13 @@ public:
 private:
 
 public:
-    size_t                     getRowCount()                const;
+    size_t                                        getRowCount()                const;
 
-    DEFAULT_MATRIX_VALUE_TYPE  get(size_t i, size_t j)      const;
+    DEFAULT_MATRIX_VALUE_TYPE                     get(size_t i, size_t j)      const;
 
-    Matrix                     operator*(const Matrix& rhs) const;
+    Matrix                                        operator*(const Matrix& rhs) const;
+
+    const std::vector<DEFAULT_MATRIX_VALUE_TYPE>& getRow(size_t row)           const;
 
 private:
     static  std::vector<DEFAULT_MATRIX_VALUE_TYPE> multiplyRow(const Matrix& rhs, const Matrix& lhs, size_t cColumns, size_t iRow);

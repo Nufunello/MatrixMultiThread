@@ -59,7 +59,7 @@ Matrix Matrix::operator*(const Matrix &rhs) const
 {
     const Matrix& lhs = *this;
 
-    const auto& cRows    = this->_values.size(),
+    const auto& cRows    = this->getRowCount(),
                 cColumns = this->_values.front().size();
 
     if (cColumns != rhs.getRowCount())
@@ -75,6 +75,11 @@ Matrix Matrix::operator*(const Matrix &rhs) const
         threads[i].join();
 
     return  resultMatrix;
+}
+
+const std::vector<DEFAULT_MATRIX_VALUE_TYPE> &Matrix::getRow(size_t row) const
+{
+    return _values[row];
 }
 
 Matrix::Matrix(size_t cRows, size_t cColumns)
