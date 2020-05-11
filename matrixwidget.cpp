@@ -36,6 +36,14 @@ MatrixWidget::MatrixWidget(QWidget *parent)
     });
 
     _generateWindow.connect(&_generateWindow, &GenerateMatrixWindow::Generated, this, &MatrixWidget::FillMatrixRandomly);
+
+    _tblMatrix.connect(&_tblMatrix, &QTableWidget::cellChanged, [this](int itRow, int itColumn){
+        int cRows = _matrix.getRowCount();
+        if (cRows > itRow)
+        {
+            _matrix.set(itRow, itColumn, _tblMatrix.itemAt(itRow, itColumn)->data(Qt::DisplayRole).toFloat());
+        }
+    });
 }
 
 void MatrixWidget::resizeEvent(QResizeEvent *event)

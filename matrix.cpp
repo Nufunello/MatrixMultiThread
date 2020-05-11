@@ -82,6 +82,11 @@ const std::vector<DEFAULT_MATRIX_VALUE_TYPE> &Matrix::getRow(size_t row) const
     return _values[row];
 }
 
+void Matrix::set(size_t i, size_t j, DEFAULT_MATRIX_VALUE_TYPE value)
+{
+    _values[i][j] = value;
+}
+
 Matrix::Matrix(size_t cRows, size_t cColumns)
 {
     _values.reserve(cRows);
