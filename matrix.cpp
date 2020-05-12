@@ -26,14 +26,14 @@ DEFAULT_MATRIX_VALUE_TYPE multiplyRowOnColumn(const Matrix& lhs, const Matrix& r
     return sum;
 }
 
-std::vector<DEFAULT_MATRIX_VALUE_TYPE> Matrix::multiplyRow(const Matrix& lhs, const Matrix& rhs, size_t iRow, size_t cColumns)
+std::vector<DEFAULT_MATRIX_VALUE_TYPE> Matrix::multiplyRow(const Matrix& biggerByRows, const Matrix& another, size_t iRow, size_t cColumns)
 {
     std::vector<DEFAULT_MATRIX_VALUE_TYPE> row;
     row.reserve(cColumns);
 
     for (size_t iColumn = 0; iColumn < cColumns; ++iColumn)
     {
-        row.emplace_back(multiplyRowOnColumn(lhs, rhs, iRow, iColumn));
+        row.emplace_back(multiplyRowOnColumn(biggerByRows, another, iRow, iColumn));
     }
 
     return row;
@@ -45,10 +45,13 @@ std::vector<std::thread> Matrix::multiplyMatrixes(Matrix& resultMatrix, const Ma
     std::vector<std::thread> threads;
     threads.reserve(cRows);
 
+    const Matrix& maxRowMatrix  = (lhs.getRowCount() > rhs.getRowCount()) ? lhs : rhs;
+    const Matrix& anotherMatrix = (&maxRowMatrix == &lhs) ? rhs : lhs;
+
     for (size_t iRow = 0; iRow < cRows; ++iRow)
     {
         threads.emplace_back([&, iRow]{
-                        resultTwoDimVector[iRow] = Matrix::multiplyRow(lhs, rhs, iRow, cColumns);
+                        resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
                     });
     }
 
@@ -77,14 +80,19 @@ Matrix Matrix::operator*(const Matrix &rhs) const
     return  resultMatrix;
 }
 
+DEFAULT_MATRIX_VALUE_TYPE &Matrix::get(size_t i, size_t j)
+{
+    return _values[i][j];
+}
+
+void Matrix::clear()
+{
+    _values.clear();
+}
+
 const std::vector<DEFAULT_MATRIX_VALUE_TYPE> &Matrix::getRow(size_t row) const
 {
     return _values[row];
-}
-
-void Matrix::set(size_t i, size_t j, DEFAULT_MATRIX_VALUE_TYPE value)
-{
-    _values[i][j] = value;
 }
 
 Matrix::Matrix(size_t cRows, size_t cColumns)

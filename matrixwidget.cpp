@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QResizeEvent>
 #include <QTextStream>
 
@@ -41,7 +42,7 @@ MatrixWidget::MatrixWidget(QWidget *parent)
         int cRows = _matrix.getRowCount();
         if (cRows > itRow)
         {
-            _matrix.set(itRow, itColumn, _tblMatrix.itemAt(itRow, itColumn)->data(Qt::DisplayRole).toFloat());
+            _matrix.get(itRow,itColumn) = _tblMatrix.itemAt(itRow, itColumn)->data(Qt::DisplayRole).toFloat();
         }
     });
 }
@@ -71,6 +72,7 @@ void MatrixWidget::paintEvent(QPaintEvent *)
 
 void MatrixWidget::fillMatrixFromFile(const QString &fileName)
 {
+    clearMatrix();
     QFile file(fileName);
     file.open(QIODevice::ReadOnly);
 
@@ -78,12 +80,31 @@ void MatrixWidget::fillMatrixFromFile(const QString &fileName)
 
     QTextStream in(&file);
     int line = 0;
-    while (!in.atEnd()) {
+    while (!in.atEnd())
+    {
         QStringList cellsValues = in.readLine().split(CELL_SEPARATOR);
-        matrix.emplace_back(this->addLineToMatrix(line++, cellsValues));
+        try {
+            matrix.emplace_back(this->addLineToMatrix(line++, cellsValues));
+        } catch (const std::exception& exception) {
+            QMessageBox msgBox;
+            msgBox.setText(QString("Error while reading from file") + exception.what());
+            msgBox.exec();
+
+            _tblMatrix.setRowCount(0);
+            _tblMatrix.setColumnCount(0);
+            return;
+        }
     }
 
     _matrix = Matrix(std::move(matrix));
+}
+
+void MatrixWidget::clearMatrix()
+{
+    _tblMatrix.setRowCount(0);
+    _tblMatrix.setColumnCount(0);
+
+    _matrix.clear();
 }
 
 std::vector<DEFAULT_MATRIX_VALUE_TYPE> MatrixWidget::addLineToMatrix(int itLine, QStringList cellsValues)
@@ -117,8 +138,8 @@ std::vector<DEFAULT_MATRIX_VALUE_TYPE> MatrixWidget::addLineToMatrix(int itLine,
 
         QTableWidgetItem* pCellWidget = new QTableWidgetItem();
         pCellWidget->setData(Qt::DisplayRole, value);
-        _tblMatrix.setItem(itLine, itCells, pCellWidget);
 
+        _tblMatrix.setItem(itLine, itCells, pCellWidget);
         row.emplace_back(value.toInt());
     }
 
@@ -127,6 +148,7 @@ std::vector<DEFAULT_MATRIX_VALUE_TYPE> MatrixWidget::addLineToMatrix(int itLine,
 
 void MatrixWidget::FillMatrixRandomly(size_t cRows, size_t cColumns, int minValue, int maxValue)
 {
+    clearMatrix();
     std::vector<std::vector<DEFAULT_MATRIX_VALUE_TYPE> > matrix;
     matrix.reserve(cRows);
 
@@ -171,6 +193,7 @@ void MatrixWidget::addLineToMatrix(int itLine, const std::vector<DEFAULT_MATRIX_
     {
         QTableWidgetItem* pCellWidget = new QTableWidgetItem();
         pCellWidget->setData(Qt::DisplayRole, cellsValues[itCells]);
+
         _tblMatrix.setItem(itLine, itCells, pCellWidget);
     }
 }

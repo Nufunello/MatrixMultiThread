@@ -24,6 +24,7 @@ public slots:
 
 private:
     void fillMatrixFromFile(const QString& fileName);
+    void clearMatrix();
 
     std::vector<DEFAULT_MATRIX_VALUE_TYPE> addLineToMatrix(int itLine, QStringList cellsValues);
     void                                   addLineToMatrix(int itLine, const std::vector<DEFAULT_MATRIX_VALUE_TYPE>& cellsValues);

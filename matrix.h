@@ -24,7 +24,9 @@ public:
     const std::vector<DEFAULT_MATRIX_VALUE_TYPE>& getRow(size_t row)           const;
 
 public:
-    void   set(size_t i, size_t j, DEFAULT_MATRIX_VALUE_TYPE value);
+    DEFAULT_MATRIX_VALUE_TYPE& get(size_t i, size_t j);
+
+    void clear();
 
 private:
     static  std::vector<DEFAULT_MATRIX_VALUE_TYPE> multiplyRow(const Matrix& rhs, const Matrix& lhs, size_t cColumns, size_t iRow);
