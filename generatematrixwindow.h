@@ -20,8 +20,8 @@ signals:
     void Generated(size_t cRows, size_t cColumns, int, int);
 
 private:
-    QLineEdit _cRows;
-    QLineEdit _cColumns;
+    QLineEdit _txtCRows;
+    QLineEdit _txtCColumns;
 
     QPushButton _btnGenerate;
 

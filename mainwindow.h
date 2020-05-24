@@ -7,6 +7,7 @@
 
 #include <QTableWidget>
 #include <QPushButton>
+#include <QLabel>
 
 class MainWindow : public QMainWindow
 {
@@ -24,8 +25,15 @@ private:
     MatrixWidget _firstMatrix;
     MatrixWidget _secondMatrix;
 
-    QPushButton _btnMultiply;
+    QPushButton  _btnMultiply;
     QTableWidget _tblResult;
+
+    QLabel    _lblCThread;
+    QLineEdit _txtCThread;
+
+    QLabel _lblMultiplyTime;
+    QLabel _lblMultiplyInfo;
+
 
 };
 #endif // MAINWINDOW_H

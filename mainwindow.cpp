@@ -17,29 +17,28 @@ MainWindow::MainWindow(QWidget *parent)
     , _secondMatrix(this)
     , _btnMultiply(this)
     , _tblResult(this)
+    , _lblCThread(this)
+    , _txtCThread(this)
+    , _lblMultiplyTime(this)
+    , _lblMultiplyInfo(this)
 {
+    _lblMultiplyInfo.setText("Elapsed time(sec):");
+
+    _lblCThread.setText("Thread count");
+    _txtCThread.setText("1");
+
     _btnMultiply.setText("Multiply");
     _btnMultiply.connect(&_btnMultiply, &QPushButton::clicked, [&]{
         try {
-            Matrix multiplyResult = _firstMatrix.Multiply(&_secondMatrix);
+            const int cThreads = _txtCThread.text().toInt();
 
-            const size_t cRows = multiplyResult.getRowCount();
-            _tblResult.setRowCount(cRows);
+            auto startMultiplyTime = std::chrono::high_resolution_clock::now();
+            _firstMatrix.MultiplyAndWriteToOutput(&_secondMatrix, &_tblResult, cThreads);
+            auto endMultiplyTime = std::chrono::high_resolution_clock::now();
 
-            for (size_t itRow = 0; itRow < cRows; ++itRow)
-            {
-                const auto& row = multiplyResult.getRow(itRow);
+            auto duration = std::chrono::duration_cast<std::chrono::seconds>(endMultiplyTime - startMultiplyTime).count();
+            _lblMultiplyTime.setText(QString::number(duration));
 
-                const size_t cColumns = row.size();
-                _tblResult.setColumnCount(cColumns);
-
-                for (size_t itColumn = 0; itColumn < cColumns; ++itColumn)
-                {
-                    auto widgetItem = new QTableWidgetItem();
-                    widgetItem->setData(Qt::DisplayRole, row[itColumn]);
-                    _tblResult.setItem(itRow, itColumn, widgetItem);
-                }
-            }
         } catch (const std::exception& ex) {
             QMessageBox msgBox;
             msgBox.setText(ex.what());
@@ -64,6 +63,14 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
     _btnMultiply.resize(100, 30);
     _tblResult.resize(widthPerInputMatrix, heightPerInputMatrix);
+
+    const int threadsInfoWidth = _btnMultiply.width();
+
+    _lblCThread.resize(threadsInfoWidth, BUTTON_HEIGHT);
+    _txtCThread.resize(threadsInfoWidth, BUTTON_HEIGHT);
+
+    _lblMultiplyTime.resize(threadsInfoWidth, BUTTON_HEIGHT);
+    _lblMultiplyInfo.resize(threadsInfoWidth, BUTTON_HEIGHT);
 }
 
 void MainWindow::paintEvent(QPaintEvent *)
@@ -73,5 +80,11 @@ void MainWindow::paintEvent(QPaintEvent *)
 
     _btnMultiply.move(this->width() / 2 - _btnMultiply.width() / 2, this->height() / 2 - BUTTON_HEIGHT / 2);
     _tblResult.move(this->width() / 2 - _tblResult.width() / 2, _btnMultiply.y() + BUTTON_HEIGHT);
+
+    _lblMultiplyInfo.move(_lblMultiplyTime.width() / 2, _tblResult.y() + _tblResult.height() / 3);
+    _lblMultiplyTime.move(_lblMultiplyInfo.x(), _lblMultiplyInfo.y() + _lblMultiplyInfo.height());
+
+    _lblCThread.move((_tblResult.x() + _tblResult.width()) + _lblCThread.width() / 2, _tblResult.y() + _tblResult.height() / 3);
+    _txtCThread.move(_lblCThread.x(), _lblCThread.y() + _lblCThread.height());
 }
 

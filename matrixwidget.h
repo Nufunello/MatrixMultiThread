@@ -20,13 +20,13 @@ protected:
 
 public slots:
     void FillMatrixRandomly(size_t cRows, size_t cColumns, int minValue, int maxValue);
-    Matrix Multiply(MatrixWidget* rhs);
+    void MultiplyAndWriteToOutput(MatrixWidget* rhs, QTableWidget *out, const size_t cThreads = 1);
 
 private:
     void fillMatrixFromFile(const QString& fileName);
     void clearMatrix();
 
-    std::vector<DEFAULT_MATRIX_VALUE_TYPE> addLineToMatrix(int itLine, QStringList cellsValues);
+    std::vector<DEFAULT_MATRIX_VALUE_TYPE> addLineToMatrix(int itLine, const QStringList& cellsValues);
     void                                   addLineToMatrix(int itLine, const std::vector<DEFAULT_MATRIX_VALUE_TYPE>& cellsValues);
 
 

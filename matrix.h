@@ -19,7 +19,7 @@ public:
 
     DEFAULT_MATRIX_VALUE_TYPE                     get(size_t i, size_t j)      const;
 
-    Matrix                                        operator*(const Matrix& rhs) const;
+    Matrix                                        multiply(const Matrix& rhs, const size_t threadCount) const;
 
     const std::vector<DEFAULT_MATRIX_VALUE_TYPE>& getRow(size_t row)           const;
 
@@ -31,7 +31,7 @@ public:
 private:
     static  std::vector<DEFAULT_MATRIX_VALUE_TYPE> multiplyRow(const Matrix& rhs, const Matrix& lhs, size_t cColumns, size_t iRow);
 
-    static  std::vector<std::thread>               multiplyMatrixes(Matrix& resultMatrix, const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns);
+    static  Matrix                                 multiplyMatrixes(const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns, const size_t threadCount);
 
             Matrix(size_t cRows, size_t cColumns);
 

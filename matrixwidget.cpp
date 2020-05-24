@@ -12,6 +12,62 @@ constexpr int BUTTON_HEIGHT = 30;
 
 constexpr char CELL_SEPARATOR = ',';
 
+std::vector<DEFAULT_MATRIX_VALUE_TYPE> addCells(QTableWidget* out, const int itLine, const int cColumns, const QStringList& inputContainer)
+{
+    std::vector<DEFAULT_MATRIX_VALUE_TYPE> row;
+    row.reserve(cColumns);
+
+    for (int itCells = 0; itCells < cColumns; ++itCells)
+    {
+        const QString& value = inputContainer[itCells];
+
+        QTableWidgetItem* pCellWidget = new QTableWidgetItem();
+        pCellWidget->setData(Qt::DisplayRole, value);
+        out->setItem(itLine, itCells, pCellWidget);
+
+        row.emplace_back(value.toInt());
+    }
+
+    return row;
+}
+
+std::vector<DEFAULT_MATRIX_VALUE_TYPE> addCells(QTableWidget* out, const int itLine, const int cColumns, std::vector<DEFAULT_MATRIX_VALUE_TYPE> inputContainer)
+{
+    for (int itCells = 0; itCells < cColumns; ++itCells)
+    {
+        QTableWidgetItem* pCellWidget = new QTableWidgetItem();
+        pCellWidget->setData(Qt::DisplayRole, inputContainer[itCells]);
+        out->setItem(itLine, itCells, pCellWidget);
+    }
+
+    return inputContainer;
+}
+
+template<typename InputContainer>
+std::vector<DEFAULT_MATRIX_VALUE_TYPE> addLine(QTableWidget* out, const int itLine, const InputContainer& inputContainer)
+{
+    const int cColumns = inputContainer.size();
+    const int firstLineIndex = 0;
+    if (itLine == firstLineIndex)
+    {
+        out->setColumnCount(cColumns);
+        for (int itColumns = 0; itColumns < cColumns; ++itColumns)
+        {
+            out->setColumnWidth(itColumns, 1);
+        }
+    }
+    else
+    {
+        if (cColumns != out->columnCount())
+        {
+            throw std::runtime_error("Invalid column count on row" + std::to_string(itLine));
+        }
+    }
+
+    out->insertRow(itLine);
+    return addCells(out, itLine, cColumns, inputContainer);
+}
+
 MatrixWidget::MatrixWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -84,7 +140,7 @@ void MatrixWidget::fillMatrixFromFile(const QString &fileName)
     {
         QStringList cellsValues = in.readLine().split(CELL_SEPARATOR);
         try {
-            matrix.emplace_back(this->addLineToMatrix(line++, cellsValues));
+            matrix.emplace_back(addLine(&_tblMatrix, line++, cellsValues));
         } catch (const std::exception& exception) {
             QMessageBox msgBox;
             msgBox.setText(QString("Error while reading from file") + exception.what());
@@ -107,45 +163,6 @@ void MatrixWidget::clearMatrix()
     _matrix.clear();
 }
 
-std::vector<DEFAULT_MATRIX_VALUE_TYPE> MatrixWidget::addLineToMatrix(int itLine, QStringList cellsValues)
-{
-    int cColumns = cellsValues.size();
-
-    const int firstLineIndex = 0;
-    if (itLine == firstLineIndex)
-    {
-        _tblMatrix.setColumnCount(cColumns);
-        for (int itColumns = 0; itColumns < cColumns; ++itColumns)
-        {
-            _tblMatrix.setColumnWidth(itColumns, 1);
-        }
-    }
-    else
-    {
-        if (cColumns != _tblMatrix.columnCount())
-        {
-            throw std::runtime_error("Invalid column count on row" + std::to_string(itLine));
-        }
-    }
-
-    std::vector<DEFAULT_MATRIX_VALUE_TYPE> row;
-    row.reserve(cColumns);
-
-    _tblMatrix.insertRow(itLine);
-    for (int itCells = 0; itCells < cColumns; ++itCells)
-    {
-        const QString& value = cellsValues[itCells];
-
-        QTableWidgetItem* pCellWidget = new QTableWidgetItem();
-        pCellWidget->setData(Qt::DisplayRole, value);
-
-        _tblMatrix.setItem(itLine, itCells, pCellWidget);
-        row.emplace_back(value.toInt());
-    }
-
-    return row;
-}
-
 void MatrixWidget::FillMatrixRandomly(size_t cRows, size_t cColumns, int minValue, int maxValue)
 {
     clearMatrix();
@@ -162,38 +179,18 @@ void MatrixWidget::FillMatrixRandomly(size_t cRows, size_t cColumns, int minValu
             row.emplace_back(minValue + rand() % maxValue);
         }
 
-        this->addLineToMatrix(iRow, row);
+        addLine(&_tblMatrix, iRow, row);
         matrix.emplace_back(std::move(row));
     }
 
     _matrix = Matrix(std::move(matrix));
 }
 
-Matrix MatrixWidget::Multiply(MatrixWidget *rhs)
+void MatrixWidget::MultiplyAndWriteToOutput(MatrixWidget *rhs, QTableWidget *out, const size_t cThreads)
 {
-    return this->_matrix * rhs->_matrix;
-}
-
-void MatrixWidget::addLineToMatrix(int itLine, const std::vector<DEFAULT_MATRIX_VALUE_TYPE>& cellsValues)
-{
-    int cColumns = cellsValues.size();
-
-    const int firstLineIndex = 0;
-    if (itLine == firstLineIndex)
+    Matrix multiplyResult = this->_matrix.multiply(rhs->_matrix, cThreads);
+    for (size_t itRow = 0; itRow < multiplyResult.getRowCount(); ++itRow)
     {
-        _tblMatrix.setColumnCount(cColumns);
-        for (int itColumns = 0; itColumns < cColumns; ++itColumns)
-        {
-            _tblMatrix.setColumnWidth(itColumns, 1);
-        }
-    }
-
-    _tblMatrix.insertRow(itLine);
-    for (int itCells = 0; itCells < cColumns; ++itCells)
-    {
-        QTableWidgetItem* pCellWidget = new QTableWidgetItem();
-        pCellWidget->setData(Qt::DisplayRole, cellsValues[itCells]);
-
-        _tblMatrix.setItem(itLine, itCells, pCellWidget);
+        addLine(out, itRow, multiplyResult.getRow(itRow));
     }
 }

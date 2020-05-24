@@ -1,5 +1,9 @@
 #include "matrix.h"
 
+#include <algorithm>
+
+constexpr size_t MIN_THREAD_COUNT_TO_CREATE_NEW_THREADS = 1;
+
 Matrix::Matrix(std::vector<std::vector<DEFAULT_MATRIX_VALUE_TYPE>> values) :
     _values(std::move(values))
 {
@@ -39,26 +43,70 @@ std::vector<DEFAULT_MATRIX_VALUE_TYPE> Matrix::multiplyRow(const Matrix& biggerB
     return row;
 }
 
-std::vector<std::thread> Matrix::multiplyMatrixes(Matrix& resultMatrix, const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns)
+Matrix Matrix::multiplyMatrixes(const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns, const size_t cThreads)
 {
+    Matrix resultMatrix(cRows, cColumns);
     auto& resultTwoDimVector = resultMatrix._values;
+
     std::vector<std::thread> threads;
-    threads.reserve(cRows);
+    threads.reserve(cThreads);
 
     const Matrix& maxRowMatrix  = (lhs.getRowCount() > rhs.getRowCount()) ? lhs : rhs;
     const Matrix& anotherMatrix = (&maxRowMatrix == &lhs) ? rhs : lhs;
 
-    for (size_t iRow = 0; iRow < cRows; ++iRow)
+    size_t iRow = 0;
+
+    if (cRows > cThreads)
     {
-        threads.emplace_back([&, iRow]{
-                        resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
-                    });
+        for (; iRow < cRows - cThreads; iRow += cThreads)
+        {
+            for (size_t iThread = 0; iThread < cThreads; ++iThread)
+            {
+                const auto currentRow = iRow + iThread;
+                threads.emplace_back([&, currentRow]{
+                                resultTwoDimVector[currentRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, currentRow, cColumns);
+                            });
+            }
+
+            for (size_t iThread = 0; iThread < cThreads; ++iThread)
+            {
+                threads[iThread].join();
+            }
+
+            threads.clear();
+            threads.reserve(cThreads);
+        }
+
+        iRow -= cThreads;
     }
 
-    return threads;
+    if (cThreads > MIN_THREAD_COUNT_TO_CREATE_NEW_THREADS)
+    {
+        for (; iRow < cRows; ++iRow)
+        {
+            threads.emplace_back([&, iRow]{
+                resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
+            });
+        }
+
+        for (size_t iThread = 0; iThread < threads.size(); ++iThread)
+        {
+            threads[iThread].join();
+        }
+    }
+    else
+    {
+        for (; iRow < cRows; ++iRow)
+        {
+            resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
+        }
+    }
+
+
+    return resultMatrix;
 }
 
-Matrix Matrix::operator*(const Matrix &rhs) const
+Matrix Matrix::multiply(const Matrix &rhs, const size_t cThreads) const
 {
     const Matrix& lhs = *this;
 
@@ -70,14 +118,7 @@ Matrix Matrix::operator*(const Matrix &rhs) const
         throw std::exception("First matrix column count should be equal second matrix row count");
     }
 
-    Matrix resultMatrix(cRows, cColumns);
-
-    std::vector<std::thread> threads = multiplyMatrixes(resultMatrix, lhs, rhs, cRows, cColumns);
-
-    for (size_t i = 0; i < cRows; ++i)
-        threads[i].join();
-
-    return  resultMatrix;
+    return  multiplyMatrixes(lhs, rhs, cRows, cColumns, cThreads);
 }
 
 DEFAULT_MATRIX_VALUE_TYPE &Matrix::get(size_t i, size_t j)
