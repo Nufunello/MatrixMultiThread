@@ -28,7 +28,7 @@ public:
 
     void clear();
 
-private:
+public:
     static  std::vector<DEFAULT_MATRIX_VALUE_TYPE> multiplyRow(const Matrix& rhs, const Matrix& lhs, size_t cColumns, size_t iRow);
 
     static  Matrix                                 multiplyMatrixes(const Matrix& lhs, const Matrix& rhs, const size_t& cRows, const size_t& cColumns, const size_t threadCount);

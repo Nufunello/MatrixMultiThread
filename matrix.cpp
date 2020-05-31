@@ -1,8 +1,7 @@
 #include "matrix.h"
 
-#include <algorithm>
-
-constexpr size_t MIN_THREAD_COUNT_TO_CREATE_NEW_THREADS = 1;
+#include <QThread>
+#include <QDebug>
 
 Matrix::Matrix(std::vector<std::vector<DEFAULT_MATRIX_VALUE_TYPE>> values) :
     _values(std::move(values))
@@ -48,60 +47,56 @@ Matrix Matrix::multiplyMatrixes(const Matrix& lhs, const Matrix& rhs, const size
     Matrix resultMatrix(cRows, cColumns);
     auto& resultTwoDimVector = resultMatrix._values;
 
-    std::vector<std::thread> threads;
-    threads.reserve(cThreads);
-
     const Matrix& maxRowMatrix  = (lhs.getRowCount() > rhs.getRowCount()) ? lhs : rhs;
     const Matrix& anotherMatrix = (&maxRowMatrix == &lhs) ? rhs : lhs;
 
-    size_t iRow = 0;
+    auto rowFunc = [&](const size_t iRow){
+        resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
+    };
 
-    if (cRows > cThreads)
+    std::vector<std::thread> threads;
+    threads.reserve(cThreads);
+
+    const size_t rowsPerThread = cRows / cThreads;
+
+    for (size_t iThread = 0; iThread < cThreads; ++iThread)
     {
-        for (; iRow < cRows - cThreads; iRow += cThreads)
-        {
-            for (size_t iThread = 0; iThread < cThreads; ++iThread)
+        std::thread thread([&rowFunc, iThread, rowsPerThread]() {
+            const size_t lastRowForThread = (iThread + 1) * rowsPerThread;
+            for (size_t iRow = iThread * rowsPerThread; iRow < lastRowForThread; ++iRow)
             {
-                const auto currentRow = iRow + iThread;
-                threads.emplace_back([&, currentRow]{
-                                resultTwoDimVector[currentRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, currentRow, cColumns);
-                            });
+                rowFunc(iRow);
+            }
+        });
+
+        threads.emplace_back(std::move(thread));
+    }
+
+
+    size_t rowsCalculated = cThreads * rowsPerThread;
+    if (rowsCalculated < cRows)
+    {
+        const size_t rowsLeft = cRows - rowsCalculated;
+        for (size_t iThread = 0; iThread < rowsLeft; ++iThread)
+        {
+            auto& thread = threads[iThread];
+            if (thread.joinable())
+            {
+                thread.join();
             }
 
-            for (size_t iThread = 0; iThread < cThreads; ++iThread)
-            {
-                threads[iThread].join();
-            }
-
-            threads.clear();
-            threads.reserve(cThreads);
+            thread = std::thread(rowFunc, rowsCalculated++);
         }
-
-        iRow -= cThreads;
     }
 
-    if (cThreads > MIN_THREAD_COUNT_TO_CREATE_NEW_THREADS)
+    for (size_t iThread = 0; iThread < cThreads; ++iThread)
     {
-        for (; iRow < cRows; ++iRow)
+        auto& thread = threads[iThread];
+        if (thread.joinable())
         {
-            threads.emplace_back([&, iRow]{
-                resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
-            });
-        }
-
-        for (size_t iThread = 0; iThread < threads.size(); ++iThread)
-        {
-            threads[iThread].join();
+            thread.join();
         }
     }
-    else
-    {
-        for (; iRow < cRows; ++iRow)
-        {
-            resultTwoDimVector[iRow] = Matrix::multiplyRow(maxRowMatrix, anotherMatrix, iRow, cColumns);
-        }
-    }
-
 
     return resultMatrix;
 }

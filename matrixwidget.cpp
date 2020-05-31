@@ -188,6 +188,10 @@ void MatrixWidget::FillMatrixRandomly(size_t cRows, size_t cColumns, int minValu
 
 void MatrixWidget::MultiplyAndWriteToOutput(MatrixWidget *rhs, QTableWidget *out, const size_t cThreads)
 {
+    out->clear();
+    out->setRowCount(0);
+    out->setColumnCount(0);
+
     Matrix multiplyResult = this->_matrix.multiply(rhs->_matrix, cThreads);
     for (size_t itRow = 0; itRow < multiplyResult.getRowCount(); ++itRow)
     {
